@@ -23,12 +23,27 @@ private:
 public:
     Polynomial() {}
     Polynomial(vector<T> &coeff):degree(coeff.size() - 1), coeffs(coeff){}
+    inline size_t get_degree() {
+        return this->degree;
+    }
     inline void check() {
         cout << "Coeffs: ";
         for (auto e: coeffs) {
             cout << e << " ";
         }
         cout << endl;
+    }
+    inline T get_coeff_by_rank(size_t rank) {
+        assert(rank < this->coeffs.size() && "Error: visiting rank that is too big!");
+        return this->coeffs[rank];
+    }
+    inline T get_last_nonzero_coeff() {
+        int this_size = this->coeffs.size();
+        for (int i = this_size - 1; i >= 0; i--) {
+            if (this->coeffs[i] != 0) 
+                return this->coeffs[i];
+        }
+        return 0;
     }
     void prune() {
         for (int i = 0; i < this->coeffs.size(); i++) {
@@ -46,13 +61,44 @@ struct EncryptPolynomial {
         But the polynomial we use to approximate ReLU has coefficients in double.
         So, we need to convert it into a integer coeff polynomial with a factor of k.
     */
-    Polynomial<int> poly;
-    int k;
+    Polynomial<long long> poly;
+    long long k;
+    void show() {
+        poly.check();
+        cout << "expansion coeff is: " << k << endl;
+    }
 };
 
 
+template<typename T>
+EncryptPolynomial round_polynomial(Polynomial<T> &poly) {
+    EncryptPolynomial ret;
+    
+    // Calculate k
+    T last_coeff = poly.get_last_nonzero_coeff();
+    cout << "last coeff is: " << last_coeff << endl;
+    long long k = (long long)((T)(1) / last_coeff);
+    cout << "k is: " << k << endl;
+    ret.k = k;
+    
+    vector<long long> new_coeff;
+    size_t degree = poly.get_degree();
+    for (int i = 0; i <= degree; i++) {
+        T expand = poly.get_coeff_by_rank(i) * (T)(k);
+        long long tmp = (long long)(expand);
+        tmp = (((T)(tmp + 1) - expand) < (expand - (T)tmp)) ? tmp + 1 : tmp; 
+        new_coeff.push_back(tmp);
+    }
+
+    Polynomial p(new_coeff);
+    ret.poly = p;
+
+    return ret;
+}
+
+
 template<typename T, typename U>
-T get_coeff(const int deg, T (*func)(U), const U input) {
+T get_coeff_taylor(const int deg, T (*func)(U), const U input) {
     /*
         Calculating the coeff for degree `deg`, using the approximation formula:
         $f^{(n)}(x) \approx \frac {(-1)^0C_{n}^{0}f(x + n\Delta{x}) + 
@@ -141,7 +187,7 @@ public:
         */
         vector<T> coefficients;
         for (int i = 0; i <= deg; i++) {
-            T get_val = get_coeff(i, this->func, input);
+            T get_val = get_coeff_taylor(i, this->func, input);
             for (int j = 1; j <= i; j++) {
                 get_val /= (T)j;
             }
@@ -158,3 +204,8 @@ public:
         return ret;
     }
 };
+
+
+/*
+    Taylor approximation seems not that good, we can try Remez Algorithm instead
+*/
