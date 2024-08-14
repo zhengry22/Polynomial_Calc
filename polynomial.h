@@ -7,9 +7,13 @@
 #include <thread>
 #include <cassert>
 using namespace std;
-#define EPSILON 0.1
+#define EPSILON 0.05
 //#define MYDEBUG
 
+template<typename T>
+inline T abs(T x) {
+    return (x > 0) ? x : -x;
+}
 
 template<typename T>
 class Polynomial {
@@ -26,6 +30,24 @@ public:
         }
         cout << endl;
     }
+    void prune() {
+        for (int i = 0; i < this->coeffs.size(); i++) {
+            if (i != 0 && (abs(this->coeffs[i]) * 10 < abs(this->coeffs[i - 1]))) {
+                this->coeffs[i] = 0;
+            }
+        }
+    }
+};
+
+
+struct EncryptPolynomial {
+    /*
+        In homomorphic encryption, we need the polynomial to have integer coeffs.
+        But the polynomial we use to approximate ReLU has coefficients in double.
+        So, we need to convert it into a integer coeff polynomial with a factor of k.
+    */
+    Polynomial<int> poly;
+    int k;
 };
 
 
@@ -78,9 +100,9 @@ T get_coeff(const int deg, T (*func)(U), const U input) {
         int sign = (i % 2 == 0) ? 1 : -1;
         numerator += (double)sign * (double)comb_coeffs[i] * func_values[i];
     }
-    //cout << "numerator: " << numerator << endl;
+    // cout << "numerator: " << numerator << endl;
     numerator /= denom;
-    cout << "numerator: " << numerator << endl;
+    //cout << "numerator: " << numerator << endl;
     for (int i = 1; i <= deg; i++) {
         numerator /= EPSILON;
     }
