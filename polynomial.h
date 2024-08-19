@@ -23,21 +23,21 @@ private:
 public:
     Polynomial() {}
     Polynomial(vector<T> &coeff):degree(coeff.size() - 1), coeffs(coeff){}
-    inline size_t get_degree() {
+    inline size_t get_degree() const {
         return this->degree;
     }
-    inline void check() {
+    inline void check() const {
         cout << "Coeffs: ";
         for (auto e: coeffs) {
             cout << e << " ";
         }
         cout << endl;
     }
-    inline T get_coeff_by_rank(size_t rank) {
+    inline T get_coeff_by_rank(size_t rank) const {
         assert(rank < this->coeffs.size() && "Error: visiting rank that is too big!");
         return this->coeffs[rank];
     }
-    inline T get_last_nonzero_coeff() {
+    inline T get_last_nonzero_coeff() const {
         int this_size = this->coeffs.size();
         for (int i = this_size - 1; i >= 0; i--) {
             if (this->coeffs[i] != 0) 
@@ -61,7 +61,8 @@ struct EncryptPolynomial {
         But the polynomial we use to approximate ReLU has coefficients in double.
         So, we need to convert it into a integer coeff polynomial with a factor of k.
     */
-    Polynomial<long long> poly;
+public:
+    Polynomial<long> poly;
     long long k;
     void show() {
         poly.check();
@@ -76,16 +77,16 @@ EncryptPolynomial round_polynomial(Polynomial<T> &poly) {
     
     // Calculate k
     T last_coeff = poly.get_last_nonzero_coeff();
-    cout << "last coeff is: " << last_coeff << endl;
+    //cout << "last coeff is: " << last_coeff << endl;
     long long k = (long long)((T)(1) / last_coeff);
-    cout << "k is: " << k << endl;
+    //cout << "k is: " << k << endl;
     ret.k = k;
     
-    vector<long long> new_coeff;
+    vector<long> new_coeff;
     size_t degree = poly.get_degree();
     for (int i = 0; i <= degree; i++) {
         T expand = poly.get_coeff_by_rank(i) * (T)(k);
-        long long tmp = (long long)(expand);
+        long tmp = (long)(expand);
         tmp = (((T)(tmp + 1) - expand) < (expand - (T)tmp)) ? tmp + 1 : tmp; 
         new_coeff.push_back(tmp);
     }
@@ -209,3 +210,7 @@ public:
 /*
     Taylor approximation seems not that good, we can try Remez Algorithm instead
 */
+template<typename T, typename U>
+class Remez: public PolyApprox<T, U> {
+    // TODO: 
+};
