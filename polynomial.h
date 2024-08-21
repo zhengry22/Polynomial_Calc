@@ -1,6 +1,6 @@
 #pragma once
-#include <Eigen/Dense>
 #include "../src/troy.h"
+#include "LinearEquation.h" 
 #include<vector>
 #include"SiLU.h"
 #include<iostream>
@@ -10,6 +10,13 @@
 using namespace std;
 #define EPSILON 0.05
 //#define MYDEBUG
+
+template<typename T>
+inline void swap(T &a, T &b) {
+    T tmp = a;
+    a = b;
+    b = tmp;
+}
 
 template<typename T>
 inline T abs(T x) {
@@ -33,6 +40,15 @@ public:
             cout << e << " ";
         }
         cout << endl;
+    }
+    inline T get_poly_value(T x) {
+        /* Using horner's algorithm to get the value p(x) */
+        T ret = 0;
+        for (int i = this->degree; i >= 0; i--) {
+            ret *= x;
+            ret += this->coeffs[i];
+        }
+        return ret;
     }
     inline T get_coeff_by_rank(size_t rank) const {
         assert(rank < this->coeffs.size() && "Error: visiting rank that is too big!");
@@ -162,12 +178,15 @@ T get_coeff_taylor(const int deg, T (*func)(U), const U input) {
 template<typename T, typename U>
 class PolyApprox {
 protected:
+    T low;
+    T high; // We approximate the polynomial within [low, high]
     size_t poly_degree = 0;
     T (*func)(U) = nullptr; // function pointer
 public: 
     PolyApprox():poly_degree(0){}
     PolyApprox(size_t deg):poly_degree(deg){}
     PolyApprox(size_t deg, T (*func)(U)): poly_degree(deg), func(func){}
+    inline void setRange(T low, T high) {this->low = low; this->high = high;}
     virtual Polynomial<T> generate_approx(int deg, U input) = 0; 
     // Pure virtual function, since each method has its own way of generating an approximate polynomial
 };
@@ -208,17 +227,64 @@ public:
 };
 
 
+/* Function used for Chebyshev nodes of the 1st kind */
+template<typename T>
+vector<T> chebyshev_nodes_first_kind(T a, T b, int n) {
+    if (a >= b) {swap(a, b);}
+    vector<T> nodes(n + 2);
+    double pi = 3.14159265358979323846;
+    for (int k = 0; k < n + 2; k++) {
+        nodes[k] = ((a + b) / 2) + ((b - a) / 2) * cos((2 * k + 1) * pi / (2 * (n + 2)));
+    }
+    return nodes;
+}
+
+
 /*
     Taylor approximation seems not that good, we can try Remez Algorithm instead
 */
 template<typename T, typename U>
 class Remez: public PolyApprox<T, U> {
-    // TODO: 
+private:
+    // In Remez algorithm there should be a lower bound for the convergence
+    T epsilon = EPSILON;
+public:
     Remez(size_t deg):PolyApprox<T, U>(deg){}
     Remez(size_t deg, T (*func)(U)): PolyApprox<T, U>(deg, func){}
     Polynomial<T> generate_approx(int deg, U input) {
         /*
-            Using Remez algorithm to find the 
+            Using Remez algorithm to find the best approximation
         */
+        vector<T> chebyshev_nodes = chebyshev_nodes_first_kind(this->low, this->high, deg + 2);
+        LinearEquation<T> lq(deg + 2, deg + 2);
+        
+        while (true) {
+            /* Initiate the Linear equation */
+            for (int i = 0; i < deg + 2; i++) {
+                T coeff = 1;
+                for (int j = 0; j < deg + 2; j++) {
+                    if (j == deg + 1) {
+                        T sgn = (i % 2 == 0) ? 1 : -1;
+                        lq.setMatrix(sgn, i, j);
+                    }
+                    else {
+                        lq.setMatrix(coeff, i, j);
+                        coeff *= chebyshev_nodes[i];
+                    }
+                }
+            }
+            for (int i = 0; i < deg + 2; i++) {
+                T func_val = this->func((U)(chebyshev_nodes[i]));
+                lq.setResult(func_val, i);
+            }
+
+            /* Calculate answer */
+            lq.gaussian_elimination();
+            vector<T> final_result = lq.solution();
+
+            /* Construct a polynomial using the coefficients we got above */
+            Polynomial<T> poly(final_result);
+        }
+        
     }
 };
