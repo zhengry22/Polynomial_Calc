@@ -1,6 +1,7 @@
 #pragma once
 #include<iostream>
 #include <cassert>
+#include <vector>
 //#define MYDEBUG
 using namespace std;
 
@@ -71,6 +72,30 @@ public:
     inline void setResult(T coeff, size_t x) {
         assert(x < this->rows && "Error: exceed maximum row");
         this->result[x] = coeff;
+    }
+    inline vector<T> solution() {
+        /*
+            This function can only be applied if the matrix is square;
+            It returns the unique solution to the equation.
+        */
+        auto checkCondition = [this]() -> bool {
+            for (int i = 0; i < this->cols; i++) {
+                for (int j = 0; j < this->cols; j++) {
+                    if (((i == j) && (this->matrix[i][j] != 1)) || ((i != j) && (this->matrix[i][j] != 0))) {
+                        return false;
+                    } 
+                }
+            }
+            return true;
+        };
+
+        assert(this->cols == this->rows && "Error: not a square matrix");
+        assert(checkCondition() && "Error: no proper solution!");
+        vector<T> ret;
+        for (int i = 0; i < this->rows; i++) {
+            ret.push_back(this->result[i]);
+        }
+        return ret;
     }
     inline void show() {
         cout << "A: " << endl;
