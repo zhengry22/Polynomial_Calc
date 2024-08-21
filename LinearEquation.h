@@ -90,7 +90,7 @@ public:
         };
 
         assert(this->cols == this->rows && "Error: not a square matrix");
-        assert(checkCondition() && "Error: no proper solution!");
+        if (!checkCondition()) {cout << "This equation has no solution or multiple solution" << endl;}
         vector<T> ret;
         for (int i = 0; i < this->rows; i++) {
             ret.push_back(this->result[i]);
