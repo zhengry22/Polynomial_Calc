@@ -1,37 +1,74 @@
 #pragma once
 #include<iostream>
 #include"LinearEquation.h"
-//#include <Eigen/Dense>
+#include <Eigen/Dense>
+#include <chrono>  // 用于测量时间
+#include <random>  // 用于生成随机数
+
 using namespace std;
+using namespace Eigen;
 
-/*
-    This program is used to measure the efficiency of my own 
-    LEQ class and Eigen
-*/
+// 生成随机矩阵和向量
+void generate_random_data(MatrixXd &A, VectorXd &b) {
+    random_device rd;  // 获取随机数种子
+    mt19937 gen(rd()); // 初始化随机数生成器
+    uniform_real_distribution<> dis(-10.0, 10.0);  // 生成范围为 [-10, 10] 的随机数
 
-double coeff_for_matrix[4][4] = {
-    {2, -1, -1, 1},
-    {1, 1, -2, 1},
-    {4, 6, 2, -2},
-    {3, 6, -9, 7}
-};
-
-double coeff_for_result[4] = {2, 4, 4, 9};
+    for (int i = 0; i < A.rows(); i++) {
+        for (int j = 0; j < A.cols(); j++) {
+            A(i, j) = dis(gen);  // 生成随机系数
+        }
+        b(i) = dis(gen);  // 生成随机右边的向量
+    }
+}
 
 int main() {
-    LinearEquation<double> lq(4, 4);
-    for (int i = 0; i < 4; i++) {
-        for (int j = 0; j < 4; j++) {
-            lq.setMatrix(coeff_for_matrix[i][j], i, j);
+    // 随机生成矩阵和向量的规模
+    random_device rd;
+    mt19937 gen(rd());
+    uniform_int_distribution<> size_dis(2, 10);  // 矩阵和向量的规模范围为 [2, 10]
+
+    int n = size_dis(gen);  // 随机规模
+    MatrixXd A(n, n);
+    VectorXd b(n);
+
+    // 生成随机的矩阵和向量
+    generate_random_data(A, b);
+
+    // 测试自定义的 LinearEquation 类
+    LinearEquation<double> lq(n, n);
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            lq.setMatrix(A(i, j), i, j);
         }
     }
-    for (int i = 0; i < 4; i++) {
-        lq.setResult(coeff_for_result[i], i);
+    for (int i = 0; i < n; i++) {
+        lq.setResult(b(i), i);
     }
+
+    cout << "Matrix A:\n" << A << endl;
+    cout << "Vector b:\n" << b << endl;
+
     cout << "Before elimination: " << endl;
     lq.show();
+
+    auto start_lq = chrono::high_resolution_clock::now();
     lq.gaussian_elimination();
+    auto end_lq = chrono::high_resolution_clock::now();
+    auto duration_lq = chrono::duration_cast<chrono::microseconds>(end_lq - start_lq).count();
+
     cout << "After elimination: " << endl;
     lq.show();
+    cout << "Custom LinearEquation class took " << duration_lq << " microseconds." << endl;
+
+    // 使用 Eigen 库求解（使用矩阵逆）
+    auto start_eigen = chrono::high_resolution_clock::now();
+    VectorXd x = A.inverse() * b;  // 使用矩阵逆求解
+    auto end_eigen = chrono::high_resolution_clock::now();
+    auto duration_eigen = chrono::duration_cast<chrono::microseconds>(end_eigen - start_eigen).count();
+
+    cout << "Eigen solution: " << x.transpose() << endl;
+    cout << "Eigen took " << duration_eigen << " microseconds." << endl;
+
     return 0;
 }
