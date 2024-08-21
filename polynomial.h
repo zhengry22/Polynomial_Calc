@@ -1,4 +1,5 @@
 #pragma once
+#include <Eigen/Dense>
 #include "../src/troy.h"
 #include<vector>
 #include"SiLU.h"
@@ -213,4 +214,11 @@ public:
 template<typename T, typename U>
 class Remez: public PolyApprox<T, U> {
     // TODO: 
+    Remez(size_t deg):PolyApprox<T, U>(deg){}
+    Remez(size_t deg, T (*func)(U)): PolyApprox<T, U>(deg, func){}
+    Polynomial<T> generate_approx(int deg, U input) {
+        /*
+            Using Remez algorithm to find the 
+        */
+    }
 };
