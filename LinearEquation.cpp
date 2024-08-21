@@ -54,11 +54,16 @@ int main() {
 
     auto start_lq = chrono::high_resolution_clock::now();
     lq.gaussian_elimination();
-    auto end_lq = chrono::high_resolution_clock::now();
-    auto duration_lq = chrono::duration_cast<chrono::microseconds>(end_lq - start_lq).count();
+
 
     cout << "After elimination: " << endl;
-    lq.show();
+    vector<double> result_lq = lq.solution();
+    auto end_lq = chrono::high_resolution_clock::now();
+    auto duration_lq = chrono::duration_cast<chrono::microseconds>(end_lq - start_lq).count();
+    for (int i = 0; i < result_lq.size(); i++) {
+        cout << result_lq[i] << " ";
+    }
+    cout << endl;
     cout << "Custom LinearEquation class took " << duration_lq << " microseconds." << endl;
 
     // 使用 Eigen 库求解（使用矩阵逆）
