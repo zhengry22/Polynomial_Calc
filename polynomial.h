@@ -1,10 +1,11 @@
 #pragma once
 #include "../src/troy.h"
 #include "LinearEquation.h" 
-#include<vector>
-#include"SiLU.h"
-#include<iostream>
-#include<cmath>
+#include <vector>
+#include "SiLU.h"
+#include <iostream>
+#include <cmath>
+#include <limits>
 #include <thread>
 #include <cassert>
 using namespace std;
@@ -255,8 +256,11 @@ public:
         /*
             Using Remez algorithm to find the best approximation
         */
-        vector<T> chebyshev_nodes = chebyshev_nodes_first_kind(this->low, this->high, deg + 2);
+
+        /* Initialize the exchange nodes with chebyshev nodes first */
+        vector<T> exchange_nodes = chebyshev_nodes_first_kind(this->low, this->high, deg + 2); 
         LinearEquation<T> lq(deg + 2, deg + 2);
+        T 
         
         while (true) {
             /* Initiate the Linear equation */
@@ -269,12 +273,12 @@ public:
                     }
                     else {
                         lq.setMatrix(coeff, i, j);
-                        coeff *= chebyshev_nodes[i];
+                        coeff *= exchange_nodes[i];
                     }
                 }
             }
             for (int i = 0; i < deg + 2; i++) {
-                T func_val = this->func((U)(chebyshev_nodes[i]));
+                T func_val = this->func((U)(exchange_nodes[i]));
                 lq.setResult(func_val, i);
             }
 
@@ -284,6 +288,12 @@ public:
 
             /* Construct a polynomial using the coefficients we got above */
             Polynomial<T> poly(final_result);
+
+            /* Find the maximum difference, this is the most difficult part for us to do */
+
+            /* Substitute the points in chebyshev nodes, keep in mind about the substitution law */
+
+            /* Go in the next loop until the */
         }
         
     }
