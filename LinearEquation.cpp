@@ -1,7 +1,7 @@
 #pragma once
 #include<iostream>
 #include"LinearEquation.h"
-#include <Eigen/Dense>
+//#include <Eigen/Dense>
 using namespace std;
 
 /*
@@ -9,22 +9,23 @@ using namespace std;
     LEQ class and Eigen
 */
 
-double coeff_for_matrix[3][6] = {
-    {0, 1, 2, 3, 4, 0},
-    {0, 2, 4, 0, 2, 1},
-    {0, 3, 6, 1, 4, 1}
+double coeff_for_matrix[4][4] = {
+    {2, -1, -1, 1},
+    {1, 1, -2, 1},
+    {4, 6, 2, -2},
+    {3, 6, -9, 7}
 };
 
-double coeff_for_result[3] = {10, 9, 15};
+double coeff_for_result[4] = {2, 4, 4, 9};
 
 int main() {
-    LinearEquation<double> lq(3, 6);
-    for (int i = 0; i < 3; i++) {
-        for (int j = 0; j < 6; j++) {
+    LinearEquation<double> lq(4, 4);
+    for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < 4; j++) {
             lq.setMatrix(coeff_for_matrix[i][j], i, j);
         }
     }
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 4; i++) {
         lq.setResult(coeff_for_result[i], i);
     }
     cout << "Before elimination: " << endl;

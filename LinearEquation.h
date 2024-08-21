@@ -1,6 +1,7 @@
 #pragma once
 #include<iostream>
 #include <cassert>
+//#define MYDEBUG
 using namespace std;
 
 template<typename T>
@@ -29,10 +30,11 @@ private:
         */
         assert(x < this->rows && "Error: x to large in to_1!");
         assert(this->matrix[x][y] != 0 && "Error: pivot is 0!");
+        T factor = this->matrix[x][y];
         for (int i = 0; i < this->cols; i++) {
-            this->matrix[x][i] /= this->matrix[x][y];
+            this->matrix[x][i] /= factor;
         }
-        this->result[x] /= this->matrix[x][y];
+        this->result[x] /= factor;
     }
     inline void row_reduct(size_t x, size_t y, T factor) {
         /*
@@ -86,7 +88,8 @@ public:
     }
     void gaussian_elimination() {
         int row_id = 0;
-        for (int i = 0; i < this->rows; i++) {
+        for (int i = 0; i < this->cols; i++) {
+            if (row_id >= this->rows) break;
             /*
                 Note that the i-th col of the i-th row maybe 0 after elimination.
             */
@@ -115,12 +118,23 @@ public:
                 pivot to 1 and then eliminate.
             */
             to_1(row_id, i);
+#ifdef MYDEBUG
+            cout << "After to 1 in i = " << i << ": " << endl;
+            this->show();
+#endif
             for (int j = 0; j < this->rows; j++) {
                 if (j == row_id) continue;
                 T factor = this->matrix[j][i] / this->matrix[row_id][i];
                 row_reduct(j, row_id, factor);
+#ifdef MYDEBUG
+                cout << "Row reduct " << j << endl;
+                this->show();
+#endif
             }
             row_id++;
+#ifdef MYDEBUG
+            this->show();
+#endif
         }
     }
 };
