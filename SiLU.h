@@ -20,3 +20,13 @@ double sigmoid(double x) {
 double silu(double x) {
     return x * sigmoid(x);
 }
+
+
+double silu_derivative(double x) {
+    return sigmoid(x) + x * sigmoid(x) * (1 - sigmoid(x));
+}
+
+
+double silu_second_derivative(double x) {
+    return 2 * sigmoid(x) * (1 - sigmoid(x)) + x * sigmoid(x) * (1 - sigmoid(x)) * (1 - 2 * sigmoid(x));
+}
