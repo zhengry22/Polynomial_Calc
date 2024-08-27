@@ -1,6 +1,7 @@
 #pragma once
 #include "../src/troy.h"
 #include "LinearEquation.h" 
+//#include "Newton_iter.h"
 #include <vector>
 #include "SiLU.h"
 #include <iostream>
@@ -9,15 +10,17 @@
 #include <thread>
 #include <cassert>
 using namespace std;
-#define EPSILON 0.05
+#define EPSILON 0.00001
+#define STEP 0.00001
+#define REMEZ_MAX_ROUND 150
 //#define MYDEBUG
 
-template<typename T>
-inline void swap(T &a, T &b) {
-    T tmp = a;
-    a = b;
-    b = tmp;
-}
+// template<typename T>
+// inline void swap(T &a, T &b) {
+//     T tmp = a;
+//     a = b;
+//     b = tmp;
+// }
 
 template<typename T>
 inline T abs(T x) {
@@ -69,6 +72,25 @@ public:
                 this->coeffs[i] = 0;
             }
         }
+    }
+    Polynomial<T> derivative() {
+        vector<T> deriv_coeff;
+        if (this->degree == 0) {
+            /* Derivative = 0 */
+            deriv_coeff.push_back(0);
+        }
+        else {
+            for (int i = 1; i < this->coeffs.size(); i++) {
+                /* d(a * x^n)/dx = a * n * x^{n - 1} */
+                deriv_coeff.push_back((T)(this->coeffs[i] * (T)i));
+            }
+        }
+        Polynomial<T> ret(deriv_coeff);
+        return ret;
+    }
+    Polynomial<T> second_derivative() {
+        Polynomial<T> first_derivative = this->derivative();
+        return first_derivative.derivative();
     }
 };
 
@@ -179,14 +201,14 @@ T get_coeff_taylor(const int deg, T (*func)(U), const U input) {
 template<typename T, typename U>
 class PolyApprox {
 protected:
-    T low;
-    T high; // We approximate the polynomial within [low, high]
+    U low = -5;
+    U high = 5; // We approximate the polynomial within [low, high]
     size_t poly_degree = 0;
     T (*func)(U) = nullptr; // function pointer
 public: 
     PolyApprox():poly_degree(0){}
-    PolyApprox(size_t deg):poly_degree(deg){}
-    PolyApprox(size_t deg, T (*func)(U)): poly_degree(deg), func(func){}
+    PolyApprox(size_t deg):poly_degree(deg), low(-5), high(5){}
+    PolyApprox(size_t deg, T (*func)(U)): poly_degree(deg), func(func), low(-5), high(5){}
     inline void setRange(T low, T high) {this->low = low; this->high = high;}
     virtual Polynomial<T> generate_approx(int deg, U input) = 0; 
     // Pure virtual function, since each method has its own way of generating an approximate polynomial
@@ -253,14 +275,15 @@ public:
     Remez(size_t deg):PolyApprox<T, U>(deg){}
     Remez(size_t deg, T (*func)(U)): PolyApprox<T, U>(deg, func){}
     Polynomial<T> generate_approx(int deg, U input) {
+        cout << "You are using Remez Algorithm!" << endl;
         /*
             Using Remez algorithm to find the best approximation
         */
 
         /* Initialize the exchange nodes with chebyshev nodes first */
-        vector<T> exchange_nodes = chebyshev_nodes_first_kind(this->low, this->high, deg + 2); 
+        vector<T> exchange_nodes = chebyshev_nodes_first_kind(this->low, this->high, deg); 
         LinearEquation<T> lq(deg + 2, deg + 2);
-        T 
+        int count = 1;
         
         while (true) {
             /* Initiate the Linear equation */
@@ -285,16 +308,71 @@ public:
             /* Calculate answer */
             lq.gaussian_elimination();
             vector<T> final_result = lq.solution();
+            final_result.pop_back();
 
             /* Construct a polynomial using the coefficients we got above */
             Polynomial<T> poly(final_result);
 
-            /* Find the maximum difference, this is the most difficult part for us to do */
+            /* 
+                Find the maximum difference, this is the most difficult part for us to do.
+                We first try by moving one step at a time.
+            */
+            T max_point = this->low;
+            T max_value = std::numeric_limits<T>::min();
+            /*
+                We also need a point denoting the nexting point on its right
+            */
+            int right = 0;
+            for (T i = this->low; i < this->high; i += STEP) {
+                while((right < exchange_nodes.size()) && (i >= exchange_nodes[right])) {right++;}
+                T next = abs(this->func((U)i) - poly.get_poly_value(i));
+                max_point = (next > max_value) ? i : max_point;
+                max_value = (next > max_value) ? next : max_value;
+            }
 
-            /* Substitute the points in chebyshev nodes, keep in mind about the substitution law */
-
-            /* Go in the next loop until the */
+            /*
+                Max_point is between exchange_nodes[right - 1] and exchange_nodes[right]
+                Substitute the points in chebyshev nodes, keep in mind about the substitution law 
+            */
+            int ex_size = exchange_nodes.size();
+            if (max_value < epsilon) {
+                cout << "Converged within round " << count << endl;
+                return final_result;
+            }
+            if (right == 0) {
+                if ((this->func(max_point) - poly.get_poly_value(max_point)) * 
+                    (this->func(exchange_nodes[0]) - poly.get_poly_value(exchange_nodes[0])) > 0) {
+                    exchange_nodes[0] = max_point;
+                }
+                else {
+                    exchange_nodes.pop_back();
+                    exchange_nodes.insert(exchange_nodes.begin(), max_point);
+                }
+            }
+            else if (right == ex_size) {
+                if ((this->func(max_point) - poly.get_poly_value(max_point)) * 
+                    (this->func(exchange_nodes[ex_size - 1]) - poly.get_poly_value(exchange_nodes[ex_size - 1])) > 0) {
+                    exchange_nodes[ex_size - 1] = max_point;
+                }
+                else {
+                    exchange_nodes.erase(exchange_nodes.begin());
+                    exchange_nodes.push_back(max_point);
+                }
+            }
+            else {
+                if ((this->func(max_point) - poly.get_poly_value(max_point)) * 
+                    (this->func(exchange_nodes[ex_size - 1]) - poly.get_poly_value(exchange_nodes[right])) > 0) {
+                    exchange_nodes[right] = max_point;
+                }
+                else {
+                    exchange_nodes[right - 1] = max_point;
+                }
+            }
+            
+            count++;
+            if (count > REMEZ_MAX_ROUND) {
+                return poly;
+            }
         }
-        
     }
 };
