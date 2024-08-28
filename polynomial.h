@@ -432,6 +432,7 @@ public:
     LeastSquare(size_t deg):PolyApprox<T, U>(deg){}
     LeastSquare(size_t deg, T (*func)(U)): PolyApprox<T, U>(deg, func){}
     Polynomial<T> generate_approx(int deg, U input) {
+        cout << " You are using Least Square method! " << endl;
         /*
             Push the data points into the vectors below
         */
@@ -439,9 +440,9 @@ public:
         vector<T> y;
         vector<T> result;
         for (auto e : x) {
-            y.push_back(func(e));
+            y.push_back(this->func(e));
         } 
-        Eigen::VectorXd coeffs = fitPolynomial(x, y, degree);
+        Eigen::VectorXd coeffs = fitPolynomial(x, y, deg);
         for (int i = 0; i < coeffs.size(); i++) {
             result.push_back(coeffs(i));
         }
