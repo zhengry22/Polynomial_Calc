@@ -8,3 +8,4 @@ this may not be very accurate, as the result suggests.
 
 ## Remez
 * Using an exchange theorem which I don't really know how to implement yet;
+* Using `gelu_and_sqplus` with `RATIO = 0.25` and `uniform nodes` and `deg = 10` has a splendid effect!
