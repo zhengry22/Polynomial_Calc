@@ -1,6 +1,7 @@
 #pragma once
 #include "../src/troy.h"
 #include "LinearEquation.h" 
+#include <Eigen/Dense>
 //#include "Newton_iter.h"
 #include <vector>
 #include "SiLU.h"
@@ -10,7 +11,7 @@
 #include <thread>
 #include <cassert>
 using namespace std;
-#define EPSILON 0.00001
+#define EPSILON 0.001
 #define STEP 0.00001
 #define REMEZ_MAX_ROUND 150
 //#define MYDEBUG
@@ -263,6 +264,29 @@ vector<T> chebyshev_nodes_first_kind(T a, T b, int n) {
 }
 
 
+/* Function used for generating uniform points */
+template<typename T>
+vector<T> uniform_nodes(T a, T b, int n) {
+    if (a >= b) {swap(a, b);}
+    vector<T> nodes(n + 2);
+    for (int k = 0; k < n + 2; k++) {
+        nodes[k] = (a + (b - a) * k / (n + 1));
+    }
+    return nodes;
+}
+
+template<typename T>
+vector<T> mutate_chebyshev_nodes(int n, T alpha = 2.0) {
+    vector<T> nodes;
+    nodes.reserve(n);
+    for (int i = 1; i <= n; ++i) {
+        T xi = cos((2 * i - 1) * M_PI / (2 * n));
+        T yi = std::copysign(std::pow(std::fabs(xi), alpha), xi) * 5.0;
+        nodes.push_back(yi);
+    }
+    return nodes;
+}
+
 /*
     Taylor approximation seems not that good, we can try Remez Algorithm instead
 */
@@ -281,7 +305,9 @@ public:
         */
 
         /* Initialize the exchange nodes with chebyshev nodes first */
-        vector<T> exchange_nodes = chebyshev_nodes_first_kind(this->low, this->high, deg); 
+        //vector<T> exchange_nodes = chebyshev_nodes_first_kind(this->low, this->high, deg);
+        //vector<T> exchange_nodes = mutate_chebyshev_nodes(deg, 2.0);
+        vector<T> exchange_nodes = uniform_nodes(this->low, this->high, deg);
         LinearEquation<T> lq(deg + 2, deg + 2);
         int count = 1;
         
@@ -308,6 +334,7 @@ public:
             /* Calculate answer */
             lq.gaussian_elimination();
             vector<T> final_result = lq.solution();
+            T miu = final_result[final_result.size() - 1];
             final_result.pop_back();
 
             /* Construct a polynomial using the coefficients we got above */
@@ -335,7 +362,7 @@ public:
                 Substitute the points in chebyshev nodes, keep in mind about the substitution law 
             */
             int ex_size = exchange_nodes.size();
-            if (max_value < epsilon) {
+            if (max_value - abs(miu) < epsilon) {
                 cout << "Converged within round " << count << endl;
                 return final_result;
             }
@@ -374,5 +401,51 @@ public:
                 return poly;
             }
         }
+    }
+};
+
+
+/* Try least square method */
+template<typename T, typename U>
+class LeastSquare: public PolyApprox<T, U> {
+private:
+Eigen::MatrixXd buildVandermondeMatrix(const std::vector<U>& x, int degree) {
+    int m = x.size();
+    Eigen::MatrixXd A(m, degree + 1);
+    for (int i = 0; i < m; ++i) {
+        for (int j = 0; j <= degree; ++j) {
+            A(i, j) = std::pow(x[i], j);
+        }
+    }
+    return A;
+}
+
+Eigen::VectorXd fitPolynomial(const std::vector<U>& x, const std::vector<T>& y, int degree) {
+    Eigen::MatrixXd A = buildVandermondeMatrix(x, degree);
+    Eigen::VectorXd y_vec = Eigen::Map<const Eigen::VectorXd>(y.data(), y.size());
+
+    // 使用 Eigen 的最小二乘法求解
+    Eigen::VectorXd coeffs = A.colPivHouseholderQr().solve(y_vec);
+    return coeffs;
+}
+public: 
+    LeastSquare(size_t deg):PolyApprox<T, U>(deg){}
+    LeastSquare(size_t deg, T (*func)(U)): PolyApprox<T, U>(deg, func){}
+    Polynomial<T> generate_approx(int deg, U input) {
+        /*
+            Push the data points into the vectors below
+        */
+        vector<U> x = uniform_nodes(this->low, this->high, deg);
+        vector<T> y;
+        vector<T> result;
+        for (auto e : x) {
+            y.push_back(func(e));
+        } 
+        Eigen::VectorXd coeffs = fitPolynomial(x, y, degree);
+        for (int i = 0; i < coeffs.size(); i++) {
+            result.push_back(coeffs(i));
+        }
+        Polynomial<T> ret(result);
+        return ret;
     }
 };
