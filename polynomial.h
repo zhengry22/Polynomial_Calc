@@ -1,7 +1,6 @@
 #pragma once
 #include "../src/troy.h"
 #include "LinearEquation.h" 
-#include <Eigen/Dense>
 //#include "Newton_iter.h"
 #include <vector>
 #include "SiLU.h"
@@ -14,6 +13,11 @@ using namespace std;
 #define EPSILON 0.001
 #define STEP 0.00001
 #define REMEZ_MAX_ROUND 150
+//#define LSQ
+
+#ifdef LSQ
+#include <Eigen/Dense>
+#endif
 //#define MYDEBUG
 
 // template<typename T>
@@ -92,6 +96,20 @@ public:
     Polynomial<T> second_derivative() {
         Polynomial<T> first_derivative = this->derivative();
         return first_derivative.derivative();
+    }
+    Polynomial<T> slice(int min_, int max_) {
+        /*
+            Get the sliced polynomial whose coeff range between [coeffs[low], coeffs[high]] 
+        */
+        assert(min_ <= max_ && "Error: the lower rank is bigger than the higher rank! ");
+        assert(min_ >= 0 && "Error: the lower rank is smaller than 0! ");
+        assert(max_ <= this->degree && "Error: the higher rank exceeds the polynomial's degree! ");
+        vector<T> new_coeffs;
+        for (int i = min_; i <= max_; i++) {
+            new_coeffs.push_back(this->get_coeff_by_rank(i));
+        } 
+        Polynomial<T> ret(new_coeffs);
+        return ret;
     }
 };
 
@@ -406,6 +424,7 @@ public:
 
 
 /* Try least square method */
+#ifdef LSQ
 template<typename T, typename U>
 class LeastSquare: public PolyApprox<T, U> {
 private:
@@ -450,3 +469,4 @@ public:
         return ret;
     }
 };
+#endif
