@@ -1,6 +1,6 @@
 #pragma once
 #include<cmath>
-#define B 1
+#define BETA 1
 #define K 1.1
 #define RATIO 0.5
 #define RAN 2
@@ -72,7 +72,7 @@ double silu_with_bias(double x) {
 }
 
 double square_plus(double x) {
-    return (x + sqrt(x * x + B)) / 2;
+    return (x + sqrt(x * x + BETA)) / 2;
 }
 
 double mix_relu(double x) {
