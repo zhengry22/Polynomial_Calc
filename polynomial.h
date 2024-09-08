@@ -317,7 +317,7 @@ public:
     Remez(size_t deg):PolyApprox<T, U>(deg){}
     Remez(size_t deg, T (*func)(U)): PolyApprox<T, U>(deg, func){}
     Polynomial<T> generate_approx(int deg, U input) {
-        cout << "You are using Remez Algorithm!" << endl;
+        //cout << "You are using Remez Algorithm!" << endl;
         /*
             Using Remez algorithm to find the best approximation
         */
@@ -381,7 +381,7 @@ public:
             */
             int ex_size = exchange_nodes.size();
             if (max_value - abs(miu) < epsilon) {
-                cout << "Converged within round " << count << endl;
+                //cout << "Converged within round " << count << endl;
                 return final_result;
             }
             if (right == 0) {
