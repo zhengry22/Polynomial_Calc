@@ -10,8 +10,8 @@
 #include <thread>
 #include <cassert>
 using namespace std;
-#define EPSILON 0.001
-#define STEP 0.00001
+#define EPSILON 0.0001
+#define STEP 0.000001
 #define REMEZ_MAX_ROUND 150
 //#define LSQ
 
@@ -19,6 +19,7 @@ using namespace std;
 #include <Eigen/Dense>
 #endif
 //#define MYDEBUG
+#define TESTREMEZ
 
 // template<typename T>
 // inline void swap(T &a, T &b) {
@@ -357,7 +358,9 @@ public:
 
             /* Construct a polynomial using the coefficients we got above */
             Polynomial<T> poly(final_result);
-
+#ifdef MYDEBUG
+            cout << "final result's size: " << final_result.size() << " degree: " << deg << endl;
+#endif
             /* 
                 Find the maximum difference, this is the most difficult part for us to do.
                 We first try by moving one step at a time.
@@ -368,9 +371,11 @@ public:
                 We also need a point denoting the nexting point on its right
             */
             int right = 0;
+            int right_tmp = 0;
             for (T i = this->low; i < this->high; i += STEP) {
-                while((right < exchange_nodes.size()) && (i >= exchange_nodes[right])) {right++;}
+                while((right_tmp < exchange_nodes.size()) && (i >= exchange_nodes[right_tmp])) {right_tmp++;}
                 T next = abs(this->func((U)i) - poly.get_poly_value(i));
+                right = (next > max_value) ? right_tmp : right; 
                 max_point = (next > max_value) ? i : max_point;
                 max_value = (next > max_value) ? next : max_value;
             }
@@ -380,9 +385,10 @@ public:
                 Substitute the points in chebyshev nodes, keep in mind about the substitution law 
             */
             int ex_size = exchange_nodes.size();
+
             if (max_value - abs(miu) < epsilon) {
                 //cout << "Converged within round " << count << endl;
-                return final_result;
+                return poly;
             }
             if (right == 0) {
                 if ((this->func(max_point) - poly.get_poly_value(max_point)) * 
@@ -406,7 +412,7 @@ public:
             }
             else {
                 if ((this->func(max_point) - poly.get_poly_value(max_point)) * 
-                    (this->func(exchange_nodes[ex_size - 1]) - poly.get_poly_value(exchange_nodes[right])) > 0) {
+                    (this->func(exchange_nodes[right]) - poly.get_poly_value(exchange_nodes[right])) > 0) {
                     exchange_nodes[right] = max_point;
                 }
                 else {
@@ -451,7 +457,7 @@ public:
     LeastSquare(size_t deg):PolyApprox<T, U>(deg){}
     LeastSquare(size_t deg, T (*func)(U)): PolyApprox<T, U>(deg, func){}
     Polynomial<T> generate_approx(int deg, U input) {
-        cout << " You are using Least Square method! " << endl;
+        //cout << " You are using Least Square method! " << endl;
         /*
             Push the data points into the vectors below
         */
